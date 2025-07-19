@@ -663,7 +663,7 @@ with main_tab2:
             """)
         
         with col2:
-            if relationship_date and results['relation_based_test']:
+            if st.session_state.relationship_date_global and results['relation_based_test']:
                 st.markdown("#### 💕 관계일 기준")
                 st.success(f"""
                 **검사 가능일:** {results['relation_based_test'].strftime('%Y년 %m월 %d일')}
