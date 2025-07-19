@@ -1,6 +1,0 @@
-freeglut3-dev
-libgtk2.0-dev
-libgl1-mesa-glx
-tesseract-ocr
-tesseract-ocr-kor
-libtesseract-dev
