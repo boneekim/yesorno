@@ -27,18 +27,26 @@ with main_tab1:
     except ImportError:
         OPENCV_AVAILABLE = False
 
-    # 분석 방법 선택
-    st.subheader("🔍 분석 방법 선택")
-    if OPENCV_AVAILABLE:
-        analysis_method = st.radio(
-            "분석 방법을 선택해주세요:",
-            ["🎨 간단한 색상 분석 (빠름)", "🔬 정밀한 선 감지 분석 (정확함)"],
-            help="색상 분석은 빠르지만 기본적이고, 선 감지 분석은 더 정확하지만 시간이 조금 더 걸립니다."
-        )
-        use_opencv = "정밀한 선 감지" in analysis_method
-    else:
-        st.info("💡 OpenCV가 설치되지 않아 간단한 색상 분석만 사용 가능합니다.")
-        use_opencv = False
+    # 분석 방법 선택 (개선된 디자인)
+    with st.container():
+        st.markdown("""
+        <div style='background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%); 
+                    padding: 20px; border-radius: 15px; margin: 10px 0;'>
+            <h3 style='color: #333; margin: 0; text-align: center;'>🔍 분석 방법 선택</h3>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if OPENCV_AVAILABLE:
+            analysis_method = st.radio(
+                "원하는 분석 방법을 선택해주세요:",
+                ["🎨 간단한 색상 분석 (빠름)", "🔬 정밀한 선 감지 분석 (정확함)"],
+                help="색상 분석은 빠르지만 기본적이고, 선 감지 분석은 더 정확하지만 시간이 조금 더 걸립니다.",
+                key="analysis_method"
+            )
+            use_opencv = "정밀한 선 감지" in analysis_method
+        else:
+            st.info("💡 OpenCV가 설치되지 않아 간단한 색상 분석만 사용 가능합니다.")
+            use_opencv = False
 
     # 균형잡힌 색상 분석 함수
     def balanced_color_analysis(image):
@@ -323,6 +331,115 @@ with main_tab1:
                         
                         st.warning("⚠️ " + result['disclaimer'])
                         
+                        # 임신 가능성이 있을 때 추가 정보 제공
+                        if result['is_pregnant']:
+                            st.markdown("---")
+                            st.subheader("🤱 임신 관련 추가 정보")
+                            
+                            # 마지막 생리일 입력받기
+                            with st.expander("📅 더 정확한 정보를 위해 마지막 생리일을 입력해주세요", expanded=True):
+                                last_period_input = st.date_input(
+                                    "마지막 생리 시작일",
+                                    value=datetime.now().date() - timedelta(days=28),
+                                    help="마지막 생리가 시작된 날짜를 선택하면 주수와 출산예정일을 계산해드립니다",
+                                    key="pregnancy_lmp"
+                                )
+                                
+                                if st.button("📊 임신 주수 및 출산예정일 계산", key="calc_pregnancy_info"):
+                                    # 임신 주수 계산 (마지막 생리일로부터)
+                                    today = datetime.now().date()
+                                    days_since_lmp = (today - last_period_input).days
+                                    weeks = days_since_lmp // 7
+                                    days = days_since_lmp % 7
+                                    
+                                    # 출산예정일 계산 (LMP + 280일)
+                                    due_date = last_period_input + timedelta(days=280)
+                                    
+                                    # 병원 방문 권장 시기
+                                    first_visit_start = last_period_input + timedelta(weeks=6)
+                                    first_visit_end = last_period_input + timedelta(weeks=8)
+                                    
+                                    col1, col2, col3 = st.columns(3)
+                                    
+                                    with col1:
+                                        st.metric(
+                                            "현재 임신 주수",
+                                            f"{weeks}주 {days}일",
+                                            help="마지막 생리일 기준 계산"
+                                        )
+                                    
+                                    with col2:
+                                        st.metric(
+                                            "출산 예정일",
+                                            due_date.strftime("%Y년 %m월 %d일"),
+                                            help="40주 기준 계산"
+                                        )
+                                    
+                                    with col3:
+                                        remaining_days = (due_date - today).days
+                                        if remaining_days > 0:
+                                            st.metric(
+                                                "출산까지",
+                                                f"{remaining_days}일",
+                                                help="대략적인 남은 기간"
+                                            )
+                                        else:
+                                            st.metric(
+                                                "예정일 지남",
+                                                f"{abs(remaining_days)}일",
+                                                help="예정일을 지났습니다"
+                                            )
+                                    
+                                    # 병원 방문 안내
+                                    st.markdown("### 🏥 병원 방문 안내")
+                                    if weeks < 6:
+                                        st.info(f"""
+                                        **첫 병원 방문 권장 시기**
+                                        
+                                        🗓️ **{first_visit_start.strftime('%Y년 %m월 %d일')} ~ {first_visit_end.strftime('%Y년 %m월 %d일')}** (임신 6-8주)
+                                        
+                                        **현재는 조금 이른 시기입니다.** 
+                                        임신 6주 이후에 방문하시면 태아 심장박동을 확인할 수 있습니다.
+                                        """)
+                                    elif 6 <= weeks <= 8:
+                                        st.success(f"""
+                                        **지금이 첫 병원 방문에 적절한 시기입니다! 🎉**
+                                        
+                                        ✅ 태아 심장박동 확인 가능
+                                        ✅ 정확한 임신 주수 확인
+                                        ✅ 산전 관리 시작
+                                        """)
+                                    else:
+                                        st.warning(f"""
+                                        **빠른 병원 방문을 권장합니다**
+                                        
+                                        임신 {weeks}주로 첫 방문 권장 시기를 지났습니다.
+                                        가능한 빨리 산부인과에 방문하세요.
+                                        """)
+                            
+                            # 일반적인 임신 관리 팁
+                            st.markdown("### 💡 임신 초기 관리 팁")
+                            
+                            tip_col1, tip_col2 = st.columns(2)
+                            
+                            with tip_col1:
+                                st.markdown("""
+                                **🍎 영양 관리**
+                                - 엽산 보충제 복용 (하루 400-800㎍)
+                                - 충분한 수분 섭취
+                                - 금주, 금연
+                                - 카페인 제한 (하루 1-2잔)
+                                """)
+                            
+                            with tip_col2:
+                                st.markdown("""
+                                **⚠️ 주의사항**
+                                - 생선회, 날고기 피하기
+                                - 과도한 운동 피하기
+                                - 스트레스 관리
+                                - 정기적인 병원 방문
+                                """)
+                        
                     except Exception as e:
                         st.error(f"❌ 분석 중 오류가 발생했습니다: {str(e)}")
                         st.info("다른 이미지로 다시 시도해주세요.")
@@ -542,6 +659,19 @@ st.markdown(
     본 애플리케이션은 보조 도구일 뿐이며, 의료진의 정확한 진단을 대체할 수 없습니다.<br>
     배란일 계산은 일반적인 28일 주기를 기준으로 하며 개인차가 있을 수 있습니다.<br>
     <strong>임신 여부와 임신 계획은 반드시 의료진과 상담하세요.</strong>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
+
+# 개발자 정보
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center; color: #888; font-size: 11px; padding: 15px; margin-top: 20px;'>
+    <p>💻 <strong>Developed by BNK</strong></p>
+    <p>📧 Contact: <a href="mailto:ppojung2@naver.com" style="color: #ff6b9d; text-decoration: none;">ppojung2@naver.com</a></p>
+    <p style="margin-top: 10px; color: #aaa;">임신 기록 어시스턴트 v2.0 🤱</p>
     </div>
     """, 
     unsafe_allow_html=True
