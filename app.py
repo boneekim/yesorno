@@ -336,16 +336,19 @@ with main_tab1:
                             st.markdown("---")
                             st.subheader("🤱 임신 관련 추가 정보")
                             
-                            # 마지막 생리일 입력받기
-                            with st.expander("📅 더 정확한 정보를 위해 마지막 생리일을 입력해주세요", expanded=True):
-                                last_period_input = st.date_input(
-                                    "마지막 생리 시작일",
-                                    value=datetime.now().date() - timedelta(days=28),
-                                    help="마지막 생리가 시작된 날짜를 선택하면 주수와 출산예정일을 계산해드립니다",
-                                    key="pregnancy_lmp"
-                                )
-                                
-                                if st.button("📊 임신 주수 및 출산예정일 계산", key="calc_pregnancy_info"):
+                            # 마지막 생리일 입력받기 (자동 계산)
+                            st.markdown("#### 📅 임신 주수 및 출산예정일 계산")
+                            st.markdown("마지막 생리 시작일을 선택하면 자동으로 계산됩니다!")
+                            
+                            last_period_input = st.date_input(
+                                "마지막 생리 시작일",
+                                value=datetime.now().date() - timedelta(days=28),
+                                help="마지막 생리가 시작된 날짜를 선택하면 주수와 출산예정일이 자동으로 계산됩니다",
+                                key="pregnancy_lmp"
+                            )
+                            
+                            # 자동으로 계산 (날짜가 입력되면 바로 계산)
+                            if last_period_input:
                                     # 임신 주수 계산 (마지막 생리일로부터)
                                     today = datetime.now().date()
                                     days_since_lmp = (today - last_period_input).days
