@@ -14,6 +14,98 @@ st.set_page_config(
 st.title("임신 테스트 확인 🤱")
 st.markdown("---")
 
+# 공통 생리 주기 정보 입력 섹션
+with st.container():
+    st.markdown("""
+    <div style='background: linear-gradient(90deg, #e3f2fd 0%, #f3e5f5 50%, #fce4ec 100%); 
+                padding: 20px; border-radius: 15px; margin: 10px 0; border: 2px solid #e1bee7;'>
+        <h3 style='color: #333; margin: 0; text-align: center;'>📅 생리 주기 정보 입력</h3>
+        <p style='color: #666; margin: 10px 0 0 0; text-align: center;'>
+            아래 정보를 입력하면 두 탭에서 모두 활용됩니다! ✨
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# 세션 스테이트 초기화
+if 'last_period_global' not in st.session_state:
+    st.session_state.last_period_global = datetime.now().date() - timedelta(days=28)
+if 'cycle_length_global' not in st.session_state:
+    st.session_state.cycle_length_global = 28
+if 'relationship_date_global' not in st.session_state:
+    st.session_state.relationship_date_global = None
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    last_period_global = st.date_input(
+        "마지막 생리 시작일",
+        value=st.session_state.last_period_global,
+        help="마지막 생리가 시작된 날짜를 선택하세요",
+        key="global_last_period"
+    )
+    st.session_state.last_period_global = last_period_global
+
+with col2:
+    cycle_length_global = st.slider(
+        "생리주기 (일)",
+        min_value=21,
+        max_value=35,
+        value=st.session_state.cycle_length_global,
+        help="평소 생리주기를 선택하세요 (일반적으로 21-35일)",
+        key="global_cycle_length"
+    )
+    st.session_state.cycle_length_global = cycle_length_global
+
+with col3:
+    relationship_date_global = st.date_input(
+        "관계일 (선택사항)",
+        value=st.session_state.relationship_date_global,
+        help="관계를 가진 날짜를 선택하면 더 정확한 정보를 제공합니다",
+        key="global_relationship_date"
+    )
+    st.session_state.relationship_date_global = relationship_date_global
+
+# 입력된 정보 요약 표시
+if st.session_state.last_period_global:
+    today = datetime.now().date()
+    days_since_lmp = (today - st.session_state.last_period_global).days
+    weeks = days_since_lmp // 7
+    days = days_since_lmp % 7
+    
+    summary_col1, summary_col2, summary_col3 = st.columns(3)
+    
+    with summary_col1:
+        st.metric(
+            "마지막 생리일로부터",
+            f"{weeks}주 {days}일",
+            help="현재까지 경과한 시간"
+        )
+    
+    with summary_col2:
+        next_period = st.session_state.last_period_global + timedelta(days=st.session_state.cycle_length_global)
+        remaining_days = (next_period - today).days
+        if remaining_days > 0:
+            st.metric(
+                "다음 생리까지",
+                f"{remaining_days}일",
+                help="예상 다음 생리일까지"
+            )
+        else:
+            st.metric(
+                "생리 예정일 지남",
+                f"{abs(remaining_days)}일",
+                help="예정일을 지났습니다"
+            )
+    
+    with summary_col3:
+        st.metric(
+            "생리주기",
+            f"{st.session_state.cycle_length_global}일",
+            help="설정된 생리주기"
+        )
+
+st.markdown("---")
+
 # 메인 탭 추가
 main_tab1, main_tab2 = st.tabs(["📷 임신테스트기 분석", "📅 배란일 & 테스트 시기 계산"])
 
@@ -336,18 +428,14 @@ with main_tab1:
                             st.markdown("---")
                             st.subheader("🤱 임신 관련 추가 정보")
                             
-                            # 마지막 생리일 입력받기 (자동 계산)
-                            st.markdown("#### 📅 임신 주수 및 출산예정일 계산")
-                            st.markdown("마지막 생리 시작일을 선택하면 자동으로 계산됩니다!")
+                            # 위에서 입력한 생리 정보 활용
+                            st.markdown("#### 📅 임신 주수 및 출산예정일")
+                            st.info("💡 위에서 입력한 생리 주기 정보를 기반으로 계산됩니다!")
                             
-                            last_period_input = st.date_input(
-                                "마지막 생리 시작일",
-                                value=datetime.now().date() - timedelta(days=28),
-                                help="마지막 생리가 시작된 날짜를 선택하면 주수와 출산예정일이 자동으로 계산됩니다",
-                                key="pregnancy_lmp"
-                            )
+                            # 전역 생리 정보 사용
+                            last_period_input = st.session_state.last_period_global
                             
-                            # 자동으로 계산 (날짜가 입력되면 바로 계산)
+                            # 생리 정보가 있으면 자동으로 계산
                             if last_period_input:
                                     # 임신 주수 계산 (마지막 생리일로부터)
                                     today = datetime.now().date()
@@ -499,6 +587,7 @@ with main_tab1:
 
 with main_tab2:
     st.markdown("### 배란일과 임신테스트 최적 시기를 계산해보세요")
+    st.info("💡 위에서 입력한 생리 주기 정보를 기반으로 자동 계산됩니다!")
     
     # 배란일 계산 함수
     def calculate_ovulation_and_test_dates(last_period_date, cycle_length, relationship_date=None):
@@ -533,37 +622,15 @@ with main_tab2:
             'relation_based_test': relation_based_test
         }
     
-    # 입력 폼
-    st.subheader("📅 생리 주기 정보 입력")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        last_period = st.date_input(
-            "마지막 생리 시작일",
-            value=datetime.now().date() - timedelta(days=14),
-            help="마지막 생리가 시작된 날짜를 선택하세요"
-        )
-        
-        cycle_length = st.slider(
-            "생리주기 (일)",
-            min_value=21,
-            max_value=35,
-            value=28,
-            help="평소 생리주기를 선택하세요 (일반적으로 21-35일)"
-        )
-    
-    with col2:
-        relationship_date = st.date_input(
-            "관계일 (선택사항)",
-            value=None,
-            help="관계를 가진 날짜를 선택하면 더 정확한 테스트 시기를 안내해드립니다"
-        )
-    
-    if st.button("🔮 배란일 & 테스트 시기 계산하기", type="primary", use_container_width=True):
+    # 전역 생리 정보 활용 (자동 계산)
+    if st.session_state.last_period_global:
         
         # 계산 실행
-        results = calculate_ovulation_and_test_dates(last_period, cycle_length, relationship_date)
+        results = calculate_ovulation_and_test_dates(
+            st.session_state.last_period_global, 
+            st.session_state.cycle_length_global, 
+            st.session_state.relationship_date_global
+        )
         
         st.markdown("---")
         st.subheader("🎯 계산 결과")
@@ -651,7 +718,9 @@ with main_tab2:
             - 6개월 이상 시도해도 임신이 안 되는 경우
             - 생리주기가 매우 불규칙한 경우
             - 임신 준비를 위한 건강검진
-            """)
+                                        """)
+    else:
+        st.warning("⚠️ 위에서 생리 주기 정보를 먼저 입력해주세요!")
 
 # 면책 조항
 st.markdown("---")
